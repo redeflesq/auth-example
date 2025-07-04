@@ -1,0 +1,38 @@
+# System files
+.DS_Store
+*.swp
+*.swo
+*~
+.idea/
+.vscode/
+.git/
+
+# Tests
+tests/
+
+# Trash files
+*.txt
+*.md
+*.yml.example
+.env.example
+go.sum
+
+# JavaScript/Node.js
+*.js
+node_modules/
+package.json
+package-lock.json
+yarn.lock
+
+# Cache, binaries
+bin/
+
+# Logs
+*.log
+
+# Other
+!.env
+!docker-compose.yml
+!swagger.yml
+!migrations/
+!go.mod

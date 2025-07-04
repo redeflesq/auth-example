@@ -1,0 +1,150 @@
+basePath: /
+definitions:
+  github_com_redeflesq_auth-example_internal_model.ErrorResponse:
+    properties:
+      error:
+        type: string
+    type: object
+  github_com_redeflesq_auth-example_internal_model.SuccessResponse:
+    properties:
+      success:
+        type: string
+    type: object
+  github_com_redeflesq_auth-example_internal_model.TokenRequest:
+    properties:
+      refresh_token:
+        description: It's not hash
+        type: string
+    type: object
+  github_com_redeflesq_auth-example_internal_model.TokenResponse:
+    properties:
+      access_token:
+        type: string
+      refresh_token:
+        type: string
+    type: object
+  github_com_redeflesq_auth-example_internal_model.UserIdRequest:
+    properties:
+      user_id:
+        type: string
+    type: object
+  github_com_redeflesq_auth-example_internal_model.UserIdResponse:
+    properties:
+      user_id:
+        type: string
+    type: object
+host: localhost:8080
+info:
+  contact: {}
+  description: API for auth with JWT
+  title: Auth Example API
+  version: "1.0"
+paths:
+  /auth/logout:
+    post:
+      description: Revokes current access token and all associated refresh tokens.
+        Requires valid JWT in Authorization header.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successfully logged out
+          schema:
+            $ref: '#/definitions/github_com_redeflesq_auth-example_internal_model.SuccessResponse'
+      security:
+      - BearerAuth: []
+      summary: Logout user
+      tags:
+      - Authentication
+  /auth/me:
+    get:
+      description: Returns the user ID from valid JWT token
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successfully retrieved user ID
+          schema:
+            $ref: '#/definitions/github_com_redeflesq_auth-example_internal_model.UserIdResponse'
+      security:
+      - BearerAuth: []
+      summary: Get current user ID
+      tags:
+      - Authentication
+  /auth/refresh:
+    post:
+      consumes:
+      - application/json
+      description: Generates new access and refresh tokens pair using valid refresh
+        token
+      parameters:
+      - description: Refresh token
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_redeflesq_auth-example_internal_model.TokenRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: New tokens pair
+          schema:
+            $ref: '#/definitions/github_com_redeflesq_auth-example_internal_model.TokenResponse'
+        "400":
+          description: Invalid request format
+          schema:
+            $ref: '#/definitions/github_com_redeflesq_auth-example_internal_model.ErrorResponse'
+        "401":
+          description: Unauthorized - invalid, expired or revoked tokens
+          schema:
+            $ref: '#/definitions/github_com_redeflesq_auth-example_internal_model.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/github_com_redeflesq_auth-example_internal_model.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Refresh authentication tokens
+      tags:
+      - Authentication
+  /auth/token:
+    post:
+      consumes:
+      - application/json
+      description: Creates new access and refresh tokens pair for specified user ID
+      parameters:
+      - description: User ID
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_redeflesq_auth-example_internal_model.UserIdRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successfully generated tokens
+          schema:
+            $ref: '#/definitions/github_com_redeflesq_auth-example_internal_model.TokenResponse'
+        "400":
+          description: Invalid request or empty user ID
+          schema:
+            $ref: '#/definitions/github_com_redeflesq_auth-example_internal_model.ErrorResponse'
+        "500":
+          description: Failed to generate or save tokens
+          schema:
+            $ref: '#/definitions/github_com_redeflesq_auth-example_internal_model.ErrorResponse'
+      summary: Generate new authentication tokens
+      tags:
+      - Authentication
+schemes:
+- http
+securityDefinitions:
+  BearerAuth:
+    description: 'Type "Bearer" followed by a space and JWT token. Example: "Bearer
+      eyJhbGciOi..."'
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"
