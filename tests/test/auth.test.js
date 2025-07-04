@@ -103,7 +103,6 @@ describe('Auth Service API', () => {
         new_refresh_token = response.body.refresh_token;
     });
 
-    
     test('POST /auth/refresh - should detect IP change and send webhook', async () => {
 
         const response = await request(BASE_URL)
@@ -118,6 +117,34 @@ describe('Auth Service API', () => {
 		
         new_access_token = response.body.access_token;
         new_refresh_token = response.body.refresh_token;
+    });
+	
+	test('POST /auth/refresh - should reject with malformed refresh_token (not base64)', async () => {
+        const response = await request(BASE_URL)
+            .post('/auth/refresh')
+            .send({ refresh_token: 'not-base64-token!' })
+            .set('Authorization', `Bearer ${new_access_token}`)
+            .expect(401);
+
+        expect(response.body.error).toBe('Incorrect tokens pair');
+    });
+
+    test('POST /auth/refresh - should reject with mismatched pair_id', async () => {
+        // сгенерируем новые токены с другим user_id
+        const altUser = 'alt-user-' + Math.random().toString(36).substring(7);
+        const alt = await request(BASE_URL)
+            .post('/auth/token')
+            .send({ user_id: altUser });
+
+        const mismatched_refresh_token = alt.body.refresh_token;
+
+        const response = await request(BASE_URL)
+            .post('/auth/refresh')
+            .send({ refresh_token: mismatched_refresh_token })
+            .set('Authorization', `Bearer ${new_access_token}`) // токен от другого user
+            .expect(401);
+
+        expect(response.body.error).toBe('Incorrect tokens pair');
     });
 
     test('POST /auth/logout - should revoke tokens', async () => {
@@ -153,34 +180,6 @@ describe('Auth Service API', () => {
             .expect(400);
 
         expect(response.body.error).toBeDefined();
-    });
-
-    test('POST /auth/refresh - should reject with malformed refresh_token (not base64)', async () => {
-        const response = await request(BASE_URL)
-            .post('/auth/refresh')
-            .send({ refresh_token: 'not-base64-token!' })
-            .set('Authorization', `Bearer ${new_access_token}`)
-            .expect(401);
-
-        expect(response.body.error).toBe('Incorrect tokens pair');
-    });
-
-    test('POST /auth/refresh - should reject with mismatched pair_id', async () => {
-        // сгенерируем новые токены с другим user_id
-        const altUser = 'alt-user-' + Math.random().toString(36).substring(7);
-        const alt = await request(BASE_URL)
-            .post('/auth/token')
-            .send({ user_id: altUser });
-
-        const mismatched_refresh_token = alt.body.refresh_token;
-
-        const response = await request(BASE_URL)
-            .post('/auth/refresh')
-            .send({ refresh_token: mismatched_refresh_token })
-            .set('Authorization', `Bearer ${new_access_token}`) // токен от другого user
-            .expect(401);
-
-        expect(response.body.error).toBe('Incorrect tokens pair');
     });
 
     test('POST /auth/refresh - should reject with expired access token (manually revoked)', async () => {

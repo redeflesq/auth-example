@@ -65,10 +65,10 @@ func Close() error {
 
 func SaveRefreshToken(user_id, pair_id, resfresh_hash, useragent, ip_address string) error {
 
-	expirationMinutes, err := strconv.Atoi(os.Getenv("REFRESH_TOKEN_EXPIRATION_MINUTES"))
+	expiration_minutes, err := strconv.Atoi(os.Getenv("REFRESH_TOKEN_EXPIRATION_MINUTES"))
 
-	if err != nil || expirationMinutes < 1440 {
-		expirationMinutes = 43200
+	if err != nil || expiration_minutes < 1440 {
+		expiration_minutes = 43200
 	}
 
 	_, err = DB.Exec(
@@ -78,7 +78,7 @@ func SaveRefreshToken(user_id, pair_id, resfresh_hash, useragent, ip_address str
 		resfresh_hash,
 		useragent,
 		ip_address,
-		time.Now().Add(time.Minute*1*time.Duration(expirationMinutes)),
+		time.Now().Add(time.Minute*1*time.Duration(expiration_minutes)),
 	)
 
 	return err

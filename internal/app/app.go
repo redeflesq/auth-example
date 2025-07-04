@@ -27,7 +27,7 @@ func Run() {
 	router := mux.NewRouter()
 
 	router.PathPrefix("/swagger/").Handler(httpSwagger.Handler(
-		httpSwagger.URL("/swagger/doc.json"), // URL для JSON
+		httpSwagger.URL("/swagger/doc.json"),
 		httpSwagger.DocExpansion("none"),
 		httpSwagger.UIConfig(map[string]string{
 			"showExtensions": "true",

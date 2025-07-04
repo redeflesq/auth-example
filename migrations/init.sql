@@ -12,7 +12,7 @@ CREATE TABLE IF NOT EXISTS refresh_tokens (
 
 CREATE INDEX IF NOT EXISTS idx_refresh_tokens_user_id ON refresh_tokens(user_id);
 
-CREATE TABLE revoked_tokens (
-    pair_id TEXT PRIMARY KEY,     -- Уникальный идентификатор токена
-    expires_at TIMESTAMP NOT NULL -- Время истечения токена
+CREATE TABLE IF NOT EXISTS revoked_tokens (
+    pair_id TEXT PRIMARY KEY,
+    expires_at TIMESTAMP NOT NULL
 );

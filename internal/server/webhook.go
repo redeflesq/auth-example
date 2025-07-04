@@ -26,7 +26,7 @@ func SendWebhook(user_id, old_ip, new_ip string) {
 		"message": "Login attempt from new IP address",
 	}
 
-	jsonPayload, _ := json.Marshal(payload)
+	json_payload, _ := json.Marshal(payload)
 
-	http.Post(url, "application/json", bytes.NewBuffer(jsonPayload))
+	http.Post(url, "application/json", bytes.NewBuffer(json_payload))
 }

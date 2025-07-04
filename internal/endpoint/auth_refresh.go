@@ -84,7 +84,7 @@ func AuthRefresh(writer http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	// Ищем токен в базе по хешу
+	// Ищем токен в базе
 
 	var token_hash, ip_address, user_agent string
 	err = storage.DB.QueryRow(
@@ -136,9 +136,6 @@ func AuthRefresh(writer http.ResponseWriter, req *http.Request) {
 	}
 
 	// Генерируем новые токены
-
-	my_var := 1
-	my_var += 1
 
 	tokens_pair, err := token.GenerateTokensPair(user_id)
 	if err != nil {

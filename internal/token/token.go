@@ -1,7 +1,6 @@
 package token
 
 import (
-	"crypto/rand"
 	"encoding/base64"
 	"fmt"
 	"os"
@@ -15,15 +14,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/redeflesq/auth-example/internal/model"
 )
-
-func MakeRandomBytes(length int) []byte {
-
-	bytes := make([]byte, length)
-
-	rand.Read(bytes)
-
-	return bytes
-}
 
 func HashRefreshToken(token_data, expected_user_id string) ([]byte, error) {
 
@@ -52,14 +42,19 @@ func GenerateRefreshToken(user_id, pair_id string) (string, string, error) {
 }
 
 func DecodeRefreshToken(token string) (string, string, error) {
-	rawBytes, err := base64.StdEncoding.DecodeString(token)
+
+	raw_bytes, err := base64.StdEncoding.DecodeString(token)
+
 	if err != nil {
 		return "", "", err
 	}
-	parts := strings.SplitN(string(rawBytes), ":", 2)
+
+	parts := strings.SplitN(string(raw_bytes), ":", 2)
+
 	if len(parts) != 2 {
 		return "", "", fmt.Errorf("invalid token format")
 	}
+
 	return parts[0], parts[1], nil
 }
 
