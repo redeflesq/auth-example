@@ -5,9 +5,7 @@ import (
 	"log"
 	"net"
 	"net/http"
-	"os"
 
-	"github.com/golang-jwt/jwt/v5"
 	"github.com/redeflesq/auth-example/internal/model"
 	"github.com/redeflesq/auth-example/internal/server"
 	"github.com/redeflesq/auth-example/internal/storage"
@@ -16,7 +14,7 @@ import (
 
 // AuthRefresh godoc
 // @Summary Refresh authentication tokens
-// @Description Generates new access and refresh tokens pair using valid refresh token
+// @Description Generates new access and refresh tokens pair using valid refresh token and valid JWT from Authorization header.
 // @Tags Authentication
 // @Security BearerAuth
 // @Accept json
@@ -24,7 +22,7 @@ import (
 // @Param request body model.TokenRequest true "Refresh token"
 // @Success 200 {object} model.TokenResponse "New tokens pair"
 // @Failure 400 {object} model.ErrorResponse "Invalid request format"
-// @Failure 401 {object} model.ErrorResponse "Unauthorized - invalid, expired or revoked tokens"
+// @Failure 401 {object} model.ErrorResponse "Unauthorized - invalid or revoked tokens"
 // @Failure 500 {object} model.ErrorResponse "Internal server error"
 // @Router /auth/refresh [post]
 // @Example request
@@ -53,7 +51,7 @@ func AuthRefresh(writer http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	// Находим Access Token
+	// Находим токен доступа из запроса
 
 	access_token_str := server.GetTokenString(req)
 	if access_token_str == "" {
@@ -61,14 +59,16 @@ func AuthRefresh(writer http.ResponseWriter, req *http.Request) {
 		return
 	}
 
+	// Парсим JWT без валидации времени истечения и т. д.
+
 	access_claims := &model.Claims{}
-	access_token, err := jwt.ParseWithClaims(access_token_str, access_claims, func(token *jwt.Token) (any, error) {
-		return []byte(os.Getenv("JWT_SECRET")), nil
-	}, jwt.WithoutClaimsValidation())
+	access_token, err := token.ParseJWTWithoutValidation(access_token_str, access_claims)
 	if err != nil || !access_token.Valid {
 		server.SetResponse(writer, http.StatusUnauthorized, model.ErrorResponse{Error: "Invalid token"})
 		return
 	}
+
+	// Сверяем что токены доступа и обновления парные
 
 	refresh_pair_id, refresh_token_data, _ := token.DecodeRefreshToken(freq.RefreshToken)
 	if access_claims.PairID != refresh_pair_id {
@@ -76,21 +76,25 @@ func AuthRefresh(writer http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	// Проверяем отозван ли access token
+	user_id := access_claims.UserID
+	pair_id := access_claims.PairID
 
-	revoked, err := storage.AccessTokenIsRevoked(access_claims.PairID)
+	// Проверяем отозван ли токен доступа
+
+	revoked, err := storage.AccessTokenIsRevoked(pair_id)
 	if err != nil || revoked {
 		server.SetResponse(writer, http.StatusUnauthorized, model.ErrorResponse{Error: "Token revoked"})
 		return
 	}
 
-	// Ищем токен в базе
+	// Ищем токен обновления в базе по данным из токена доступа
+	// В данный момент токен доступа: парный и не отозван
 
 	var token_hash, ip_address, user_agent string
 	err = storage.DB.QueryRow(
 		`SELECT token_hash, ip_address, user_agent FROM refresh_tokens 
          WHERE user_id = $1 AND pair_id = $2 AND is_revoked = false AND expires_at > NOW()`,
-		access_claims.UserID, access_claims.PairID,
+		user_id, pair_id,
 	).Scan(&token_hash, &ip_address, &user_agent)
 
 	if err != nil {
@@ -99,15 +103,13 @@ func AuthRefresh(writer http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	// Верифицируем Refresh Token
+	// Верифицируем токен обновления который был получен из запроса
 
-	refresh_token_verification := token.VerifyRefreshToken(refresh_token_data, token_hash, access_claims.UserID)
+	refresh_token_verification := token.VerifyRefreshToken(refresh_token_data, token_hash, user_id)
 	if !refresh_token_verification {
 		server.SetResponse(writer, http.StatusUnauthorized, model.ErrorResponse{Error: "Incorrect refresh token"})
 		return
 	}
-
-	user_id := access_claims.UserID
 
 	// Отправляем вебхук об изменении IP (Если изменился)
 
@@ -121,12 +123,12 @@ func AuthRefresh(writer http.ResponseWriter, req *http.Request) {
 	current_useragent := req.UserAgent()
 	if current_useragent != user_agent {
 
-		err = storage.RevokeAccessToken(access_claims.PairID, access_claims.ExpiresAt.Time)
+		err = storage.RevokeAccessToken(pair_id, access_claims.ExpiresAt.Time)
 		if err != nil {
 			log.Printf("Failed to revoke token: %v", err)
 		}
 
-		err = storage.RevokeRefreshTokens(access_claims.PairID)
+		err = storage.RevokeRefreshTokens(pair_id)
 		if err != nil {
 			log.Printf("Failed to revoke token: %v", err)
 		}
@@ -137,7 +139,7 @@ func AuthRefresh(writer http.ResponseWriter, req *http.Request) {
 
 	// Генерируем новые токены
 
-	tokens_pair, err := token.GenerateTokensPair(user_id)
+	new_tokens_pair, err := token.GenerateTokensPair(user_id)
 	if err != nil {
 		server.SetResponse(writer, http.StatusInternalServerError, model.ErrorResponse{Error: "Failed to generate tokens"})
 		return
@@ -145,7 +147,7 @@ func AuthRefresh(writer http.ResponseWriter, req *http.Request) {
 
 	// Удаляем старые токены
 
-	err = storage.RevokeAccessToken(access_claims.PairID, access_claims.ExpiresAt.Time)
+	err = storage.RevokeAccessToken(pair_id, access_claims.ExpiresAt.Time)
 	if err != nil {
 		log.Println(err)
 		server.SetResponse(writer, http.StatusInternalServerError, model.ErrorResponse{Error: "Failed to revoke old access token"})
@@ -162,7 +164,7 @@ func AuthRefresh(writer http.ResponseWriter, req *http.Request) {
 	// Сохраняем новый refresh токен
 
 	ip, _, _ := net.SplitHostPort(req.RemoteAddr)
-	err = storage.SaveRefreshToken(user_id, tokens_pair.PairID, tokens_pair.RefreshToken.Hash, current_useragent, ip)
+	err = storage.SaveRefreshToken(user_id, new_tokens_pair.PairID, new_tokens_pair.RefreshToken.Hash, current_useragent, ip)
 	if err != nil {
 		log.Println(err)
 		server.SetResponse(writer, http.StatusInternalServerError, model.ErrorResponse{Error: "Failed to save refresh token"})
@@ -172,7 +174,7 @@ func AuthRefresh(writer http.ResponseWriter, req *http.Request) {
 	// Возвращаем новые токены
 
 	server.SetResponse(writer, http.StatusOK, model.TokenResponse{
-		AccessToken:  tokens_pair.AccessToken,
-		RefreshToken: tokens_pair.RefreshToken.Token,
+		AccessToken:  new_tokens_pair.AccessToken,
+		RefreshToken: new_tokens_pair.RefreshToken.Token,
 	})
 }

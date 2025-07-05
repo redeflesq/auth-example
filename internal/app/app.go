@@ -23,6 +23,8 @@ func Run() {
 	if err := storage.Init(); err != nil {
 		log.Fatal("Failed to connect to DB:", err)
 	}
+	
+	go server.CleanRevokedTokens()
 
 	router := mux.NewRouter()
 
@@ -44,6 +46,4 @@ func Run() {
 	log.Printf("Server running on port :%s", app_port)
 
 	log.Fatal(http.ListenAndServe(":"+app_port, router))
-
-	go server.CleanRevokedTokens()
 }

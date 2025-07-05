@@ -51,6 +51,14 @@ paths:
           description: Successfully logged out
           schema:
             $ref: '#/definitions/github_com_redeflesq_auth-example_internal_model.SuccessResponse'
+        "401":
+          description: Unauthorized - invalid or revoked tokens
+          schema:
+            $ref: '#/definitions/github_com_redeflesq_auth-example_internal_model.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/github_com_redeflesq_auth-example_internal_model.ErrorResponse'
       security:
       - BearerAuth: []
       summary: Logout user
@@ -58,7 +66,7 @@ paths:
       - Authentication
   /auth/me:
     get:
-      description: Returns the user ID from valid JWT token
+      description: Returns the user ID. Requires valid JWT in Authorization header.
       produces:
       - application/json
       responses:
@@ -66,6 +74,10 @@ paths:
           description: Successfully retrieved user ID
           schema:
             $ref: '#/definitions/github_com_redeflesq_auth-example_internal_model.UserIdResponse'
+        "401":
+          description: Unauthorized - invalid or revoked tokens
+          schema:
+            $ref: '#/definitions/github_com_redeflesq_auth-example_internal_model.ErrorResponse'
       security:
       - BearerAuth: []
       summary: Get current user ID
@@ -76,7 +88,7 @@ paths:
       consumes:
       - application/json
       description: Generates new access and refresh tokens pair using valid refresh
-        token
+        token and valid JWT from Authorization header.
       parameters:
       - description: Refresh token
         in: body
@@ -96,7 +108,7 @@ paths:
           schema:
             $ref: '#/definitions/github_com_redeflesq_auth-example_internal_model.ErrorResponse'
         "401":
-          description: Unauthorized - invalid, expired or revoked tokens
+          description: Unauthorized - invalid or revoked tokens
           schema:
             $ref: '#/definitions/github_com_redeflesq_auth-example_internal_model.ErrorResponse'
         "500":

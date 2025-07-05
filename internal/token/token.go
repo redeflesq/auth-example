@@ -88,6 +88,24 @@ func GenerateJWT(user_id string, pair_id string) (string, error) {
 	return token.SignedString(secret)
 }
 
+func ParseJWT(token_str string, claims jwt.Claims) (*jwt.Token, error) {
+
+	token, err := jwt.ParseWithClaims(token_str, claims, func(token *jwt.Token) (any, error) {
+		return []byte(os.Getenv("JWT_SECRET")), nil
+	}, jwt.WithExpirationRequired(), jwt.WithIssuedAt(), jwt.WithIssuer("auth-example"))
+
+	return token, err
+}
+
+func ParseJWTWithoutValidation(token_str string, claims jwt.Claims) (*jwt.Token, error) {
+
+	token, err := jwt.ParseWithClaims(token_str, claims, func(token *jwt.Token) (any, error) {
+		return []byte(os.Getenv("JWT_SECRET")), nil
+	}, jwt.WithoutClaimsValidation())
+
+	return token, err
+}
+
 func GenerateTokensPair(user_id string) (model.TokenPair, error) {
 
 	var token_pair model.TokenPair

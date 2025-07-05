@@ -5,13 +5,12 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
-	"os"
 	"strings"
 	"time"
 
-	"github.com/golang-jwt/jwt/v5"
 	"github.com/redeflesq/auth-example/internal/model"
 	"github.com/redeflesq/auth-example/internal/storage"
+	"github.com/redeflesq/auth-example/internal/token"
 )
 
 func SetResponse(writer http.ResponseWriter, status_code int, response any) {
@@ -56,9 +55,7 @@ func AuthMiddleware(next http.Handler) http.Handler {
 
 		claims := &model.Claims{}
 
-		token, err := jwt.ParseWithClaims(token_str, claims, func(token *jwt.Token) (any, error) {
-			return []byte(os.Getenv("JWT_SECRET")), nil
-		})
+		token, err := token.ParseJWT(token_str, claims)
 
 		if err != nil || !token.Valid {
 			SetResponse(writer, http.StatusUnauthorized, model.ErrorResponse{Error: "Invalid token"})
