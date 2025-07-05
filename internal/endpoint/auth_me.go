@@ -9,11 +9,12 @@ import (
 
 // AuthMe godoc
 // @Summary Get current user ID
-// @Description Returns the user ID from valid JWT token
+// @Description Returns the user ID. Requires valid JWT in Authorization header.
 // @Tags Authentication
 // @Security BearerAuth
 // @Produce json
 // @Success 200 {object} model.UserIdResponse "Successfully retrieved user ID"
+// @Failure 401 {object} model.ErrorResponse "Unauthorized - invalid or revoked tokens"
 // @Router /auth/me [get]
 // @Example response 200
 //
@@ -31,6 +32,7 @@ func AuthMe(writer http.ResponseWriter, req *http.Request) {
 	claims, ok := req.Context().Value("claims").(*model.Claims)
 
 	if !ok {
+		server.SetResponse(writer, http.StatusUnauthorized, model.ErrorResponse{Error: "Authorization required"})
 		return
 	}
 

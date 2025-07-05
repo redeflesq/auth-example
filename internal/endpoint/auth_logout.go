@@ -1,7 +1,6 @@
 package endpoint
 
 import (
-	"log"
 	"net/http"
 
 	"github.com/redeflesq/auth-example/internal/model"
@@ -16,11 +15,13 @@ import (
 // @Security BearerAuth
 // @Produce json
 // @Success 200 {object} model.SuccessResponse "Successfully logged out"
+// @Failure 401 {object} model.ErrorResponse "Unauthorized - invalid or revoked tokens"
+// @Failure 500 {object} model.ErrorResponse "Internal server error"
 // @Router /auth/logout [post]
 // @Example response 200
 //
 //	{
-//	  "success": "Logged out"
+//	  "success": "Successfully logged out"
 //	}
 //
 // @Example response 401
@@ -28,11 +29,18 @@ import (
 //	{
 //	  "error": "Invalid token"
 //	}
+//
+// @Example response 500
+//
+//	{
+//	  "error": "Failed to revoke access token"
+//	}
 func AuthLogout(writer http.ResponseWriter, req *http.Request) {
 
 	claims, ok := req.Context().Value("claims").(*model.Claims)
 
 	if !ok {
+		server.SetResponse(writer, http.StatusUnauthorized, model.ErrorResponse{Error: "Authorization required"})
 		return
 	}
 
@@ -40,12 +48,14 @@ func AuthLogout(writer http.ResponseWriter, req *http.Request) {
 
 	err = storage.RevokeAccessToken(claims.PairID, claims.ExpiresAt.Time)
 	if err != nil {
-		log.Printf("Failed to revoke token: %v", err)
+		server.SetResponse(writer, http.StatusInternalServerError, model.ErrorResponse{Error: "Failed to revoke access token"})
+		return
 	}
 
 	err = storage.RevokeRefreshTokens(claims.PairID)
 	if err != nil {
-		log.Printf("Failed to revoke token: %v", err)
+		server.SetResponse(writer, http.StatusInternalServerError, model.ErrorResponse{Error: "Failed to revoke refresh token"})
+		return
 	}
 
 	server.SetResponse(writer, http.StatusOK, model.SuccessResponse{Success: "Successfully logged out"})

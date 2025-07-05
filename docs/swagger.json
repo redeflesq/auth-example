@@ -33,6 +33,18 @@
                         "schema": {
                             "$ref": "#/definitions/github_com_redeflesq_auth-example_internal_model.SuccessResponse"
                         }
+                    },
+                    "401": {
+                        "description": "Unauthorized - invalid or revoked tokens",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_redeflesq_auth-example_internal_model.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_redeflesq_auth-example_internal_model.ErrorResponse"
+                        }
                     }
                 }
             }
@@ -44,7 +56,7 @@
                         "BearerAuth": []
                     }
                 ],
-                "description": "Returns the user ID from valid JWT token",
+                "description": "Returns the user ID. Requires valid JWT in Authorization header.",
                 "produces": [
                     "application/json"
                 ],
@@ -58,6 +70,12 @@
                         "schema": {
                             "$ref": "#/definitions/github_com_redeflesq_auth-example_internal_model.UserIdResponse"
                         }
+                    },
+                    "401": {
+                        "description": "Unauthorized - invalid or revoked tokens",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_redeflesq_auth-example_internal_model.ErrorResponse"
+                        }
                     }
                 }
             }
@@ -69,7 +87,7 @@
                         "BearerAuth": []
                     }
                 ],
-                "description": "Generates new access and refresh tokens pair using valid refresh token",
+                "description": "Generates new access and refresh tokens pair using valid refresh token and valid JWT from Authorization header.",
                 "consumes": [
                     "application/json"
                 ],
@@ -105,7 +123,7 @@
                         }
                     },
                     "401": {
-                        "description": "Unauthorized - invalid, expired or revoked tokens",
+                        "description": "Unauthorized - invalid or revoked tokens",
                         "schema": {
                             "$ref": "#/definitions/github_com_redeflesq_auth-example_internal_model.ErrorResponse"
                         }
